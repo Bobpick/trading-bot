@@ -1,0 +1,61 @@
+I ran a few different scenarios in my head before I started to make changes to my strategy and trade files. What I propose eliminates unnecessary trades, improves profits, and allows for quicker determination of success.
+
+The first file that was changed was bottrade.py. The changes are simple to find, and have to do with improving profitability. I observed, in front of my wife (she wants this to suceed) instances were the bot would simply close the trade, resulting in a loss. When we ran the backtesting data, over 330,000 such losses were found. These changes I propose is much like a person sitting in front of the computer. Yes, a trade was opened by the computer, but like a person watching - the trade doesn't close until there is profit. 
+
+Starting with def evaluatePositions(self) within botstrategy.py:
+
+def evaluatePositions(self):
+		openTrades = []
+		for trade in self.trades:
+			if (trade.status == "OPEN"):
+				openTrades.append(trade)
+
+		if (len(openTrades) < self.numSimulTrades):
+			if ((self.currentPrice-.00009) < self.indicators.movingAverage(self.prices,15)):
+				self.trades.append(BotTrade(self.currentPrice,stopLoss=.0001))
+
+		for trade in openTrades:
+			if ((self.currentPrice+.0003) > self.indicators.movingAverage(self.prices,15)) :
+				trade.close(self.currentPrice)
+Adding the little bits help ensure that a profit can be made. 
+
+In botstrade.py, the changes ensure that once the trade is open, it does not close until there is a profit.
+
+def close(self,currentPrice):
+		if currentPrice > (self.entryPrice + 0.00035):
+			self.status = "CLOSED"
+			self.exitPrice = currentPrice
+			self.output.log("Trade closed")
+
+The crux of the issue is whether this is viable for live trade. In the backtesting, using 4 simulatenous trades, the results were:
+
+LTC          ETH          DASH
+19.2         13.4         30.875    BTC coins
+
+A problem I have found is that no matter when I run the backtest, in as little as 5 days I get the same results - and the data file is always the same. The command line I use is: $ python backtest.py -c BTC_ETC -n 15 -s 1508530050 -e 1508789250 > test2.txt
+
+However, the -c flag seems to be irrelevent, as does the start and finish flags. What needs to be done is to print out the date code with the date/time of the transfers. There are only 57,000 trades made, so it is difficult to determine the actual length of testing.
+
+Also in bottrade.py, I've added some comments to make determining profit quicker with a spreadsheet:
+
+if (self.status == "CLOSED"):
+			tradeStatus = tradeStatus + " Profit:! "
+			if (self.exitPrice > self.entryPrice):
+				tradeStatus = tradeStatus + " "#\033[92m"
+			else:
+				tradeStatus = tradeStatus + " "#\033[91m"
+
+			tradeStatus = tradeStatus+str(self.exitPrice - self.entryPrice)+" "#\033[0m"
+
+When importing into a spreadsheet, the "!" acts as a delimiter. When selecting Column B, the sum is presented at the bottom of the window, saving time.
+
+I would like a few pairs of fresh eyes to see if I'm wrong or right. 
+
+I'd like the following to be implemented:
+
+1) add date code to each backtest/live.py to determine actual length of testing period
+2) Determine how much bitcoin to invest per trade.
+        I am required to have over 0.02 BTC to trade. How would I change this to 0.5 or 1 BTC as the need arises
+3) Be able with more python files to withdraw funds to a wallet, as well as to check on balances and trade history without having to log into the exchange.
+
+Thank you.
